@@ -1,0 +1,37 @@
+begin;
+select plan(31);
+
+select has_table('public', 'profiles', 'profiles exists');
+select has_table('public', 'leads', 'leads exists');
+select has_table('public', 'orders', 'orders exists');
+select has_table('public', 'payments', 'payments exists');
+select has_table('public', 'import_batches', 'import_batches exists');
+select has_column('public', 'orders', 'offer_snapshot', 'orders preserve offer snapshot');
+select col_is_pk('public', 'orders', 'id', 'orders has primary key');
+select ok((select relrowsecurity from pg_class where oid = 'public.audit_logs'::regclass), 'audit logs has RLS');
+select has_table('public', 'payment_accounts', 'official payment accounts exist');
+select has_table('public', 'financial_ledger', 'append-only financial ledger exists');
+select has_table('public', 'finance_document_jobs', 'durable document jobs exist');
+select has_table('public', 'financial_adjustments', 'audited adjustment requests exist');
+select has_column('public', 'payments', 'proof_path', 'private proof path is tracked');
+select ok((select relrowsecurity from pg_class where oid = 'public.financial_ledger'::regclass), 'ledger has RLS');
+select ok((select relrowsecurity from pg_class where oid = 'public.payment_accounts'::regclass), 'accounts have RLS');
+select ok(not has_table_privilege('authenticated', 'public.payments', 'INSERT'), 'direct payment insertion is denied');
+select ok(exists (select 1 from pg_proc where oid = 'public.finance_confirm_payment(uuid,text,text,text,timestamptz)'::regprocedure), 'controlled confirmation RPC exists');
+select has_table('public','field_policy_versions','field policies are versioned');
+select has_table('public','field_budget_permissions','explicit budget delegations exist');
+select has_table('public','field_budgets','field budgets exist');
+select has_table('public','field_advances','advances are separate from budgets');
+select has_table('public','field_expenses','justified field expenses exist');
+select has_table('public','field_restitutions','returns are separate from advances');
+select has_table('public','sales_commission_policies','commission policy versions exist');
+select has_table('public','sales_commission_positions','commission positions exist');
+select has_table('public','sales_commission_payouts','actual commission payments exist');
+select ok((select relrowsecurity from pg_class where oid='public.field_budgets'::regclass),'field budgets have RLS');
+select ok((select relrowsecurity from pg_class where oid='public.field_expenses'::regclass),'field expenses have RLS');
+select ok(not has_table_privilege('authenticated','public.field_budgets','INSERT'),'direct budget insertion is denied');
+select ok(not has_table_privilege('authenticated','public.profiles','UPDATE'),'profile role escalation through direct UPDATE is denied');
+select ok(exists (select 1 from pg_proc where oid = 'public.crm_update_sales_profile(uuid,text,date,text)'::regprocedure), 'controlled professional profile RPC exists');
+
+select * from finish();
+rollback;
